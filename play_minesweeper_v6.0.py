@@ -1,6 +1,46 @@
 '''
 VERSION 6
 edition 2023
+
+optimizar:
+
+9x9
+
+Func: get_size          Exec time: (0.0%)                      1,200     Exec times: 1
+Func: set_board         Exec time: (0.05%)                12,007,900     Exec times: 1
+Func: get_cell          Exec time: (49.45%)           11,988,086,000     Exec times: 287
+Func: invconv           Exec time: (0.0%)                     85,600     Exec times: 239
+Func: conv              Exec time: (0.0%)                    313,900     Exec times: 1493
+Func: get_board         Exec time: (3.25%)               787,679,800     Exec times: 3
+Func: decide            Exec time: (12.44%)            3,015,512,000     Exec times: 3
+Func: check_cell        Exec time: (12.44%)            3,015,103,900     Exec times: 457
+Func: random_click      Exec time: (22.37%)            5,423,733,400     Exec times: 2
+
+16x16
+
+Func: get_size          Exec time: (0.0%)                      1,300     Exec times: 1
+Func: set_board         Exec time: (0.02%)                17,912,200     Exec times: 1
+Func: get_cell          Exec time: (45.93%)           47,575,949,800     Exec times: 1981
+Func: invconv           Exec time: (0.0%)                  1,486,100     Exec times: 5520
+Func: conv              Exec time: (0.01%)                 7,909,500     Exec times: 40768
+Func: get_board         Exec time: (3.82%)             3,961,499,100     Exec times: 7
+Func: decide            Exec time: (13.2%)            13,675,358,500     Exec times: 8
+Func: check_cell        Exec time: (12.5%)            12,953,297,300     Exec times: 7458
+Func: random_click      Exec time: (24.46%)           25,339,087,800     Exec times: 10
+Func: check_patern      Exec time: (0.06%)                59,274,100     Exec times: 2136
+
+30x16
+
+Func: get_size          Exec time: (0.0%)                      1,200     Exec times: 1
+Func: set_board         Exec time: (0.01%)                34,003,900     Exec times: 1
+Func: get_cell          Exec time: (69.78%)          337,570,514,100     Exec times: 12870
+Func: invconv           Exec time: (0.0%)                  5,297,900     Exec times: 22349
+Func: conv              Exec time: (0.01%)                33,768,700     Exec times: 169060
+Func: get_board         Exec time: (6.77%)            32,748,060,900     Exec times: 26
+Func: decide            Exec time: (6.0%)             29,010,043,100     Exec times: 26
+Func: check_cell        Exec time: (5.92%)            28,616,308,800     Exec times: 41896
+Func: random_click      Exec time: (11.45%)           55,400,536,200     Exec times: 7
+Func: check_patern      Exec time: (0.07%)               357,621,100     Exec times: 3961
 '''
 #################################### modules #########################
 from selenium.webdriver.support import expected_conditions as EC
@@ -12,11 +52,32 @@ from selenium.webdriver import ActionChains
 from multiprocessing.pool import ThreadPool
 from selenium import webdriver
 from datetime import datetime
-from threading import Thread
 from time import sleep
 import numpy as np
 import random
 import os
+import time
+
+
+time_dict = {}
+times_dict = {}
+
+def timer(_func=None)->None:
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            t1 = time.perf_counter_ns()
+            value = func(*args,**kwargs)
+            t2 = time.perf_counter_ns()      
+            time_dict.update({func.__name__:t2-t1+time_dict.get(func.__name__,0)}) 
+            times_dict.update({func.__name__:times_dict.get(func.__name__,0)+1})
+                
+            return value
+        return wrapper
+    
+    if _func is None:
+        return decorator
+    else:
+        return decorator(_func)
 
 
 ############################ MAIN METHOD ###########################
@@ -60,6 +121,7 @@ def main():
         driver.find_element(By.XPATH,'//*[@id="S66"]/div/div/form/div[3]/button[2]').click()
 
     ######################################### METHODS ###################################
+    @timer
     def set_board():
         l = 0
         for i,elem in enumerate(driver.find_elements(By.XPATH,'/html/body/div[3]/div[2]/div/div[1]/div[2]/div/div[21]/table/tbody/tr/td[1]/div/div[1]/div[4]/div[2]/div')):
@@ -67,45 +129,44 @@ def main():
                 elements[l] = elem
                 l+=1
    
-     
+    @timer 
     def get_board():
-        #print('getting board')
         with ThreadPool() as pool:
-            pool.starmap(get_cell,[(index,elem) for index,elem in enumerate(elements)])
+            pool.map(get_cell,range(sizeX*sizeY))
    
-                      
-    def get_cell(index,*a):
+    @timer
+    def get_elem(index):
+        return elements[index].get_attribute('class')
+    
+    @timer                  
+    def get_cell(index)->int:
         if board_closed_cells[index]:
-            sleep(0.05)
-            k = elements[index].get_attribute('class')
-            match k.split()[-1]:
-                case 'hd_pressed':
-                    return get_cell(index)
-                
-                case 'hd_type0':
-                    board[index] = 0  
-                    board_closed_cells[index] = 0
-                    return 0 
-                   
-                case 'hd_type11' | 'hd_type10':
-                    global hadMine
-                    hadMine = True
-                    return 1
-                
-                case 'hd_closed':
-                    return 2,k
-                
-                case 'flag':
-                    return 3
-                
-                case _:
-                    board[index] = int(k[-1])   
-                    board_closed_cells[index] = 0 
-                    return 4 
+            k = get_elem(index).split()[-1][-4:]
+ 
+            if k == 'ssed':
+                return get_cell(index) 
+            
+            elif k == 'ype0':
+                board[index] = 0  
+                board_closed_cells[index] = 0
+                return 2
+            
+            elif k ==  'pe11' or k == 'pe10':
+                global hadMine
+                hadMine = True
+                return 0
+            
+            elif k ==  'osed' or k == 'flag':
+                return 0
+            
+            else:
+                board[index] = int(k[-1])
+                board_closed_cells[index] = 0 
+                return 1
         else:
-            return 5
+            return 
                         
-                        
+    @timer                    
     def check_cell(index):
         num = board[index]
         if board_closed_cells[index]:
@@ -141,12 +202,16 @@ def main():
 
         vecinos = [i for i in vecinos if board_closed_cells[i]]
         if n == 0 and len(vecinos):
-            for a in vecinos:
-                b,c = invconv(a)
-                elements[a].click()
-                get_cell(a)
-                
 
+            def task(a):
+                elements[a].click()
+                if board_closed_cells[a]:
+                    get_cell(a)
+                    
+            with ThreadPool() as pool:
+                pool.map(task,vecinos)
+                
+            b,c = invconv(vecinos[-1])
             return index - conv(b-1,c-1)
                 
                 
@@ -189,7 +254,7 @@ def main():
         else:
             return False
         
-        
+    @timer    
     def check_patern(pibotindex):
         pibot = board[pibotindex]
         if pibot==0 or board_closed_cells[pibotindex]:
@@ -309,17 +374,8 @@ def main():
                                 board_flag_change[vi]-=1
 
                     return True
-    
-        
-        
-            
-            
-        
-     
-    #def decide_cell(index):
-        
-                     
-         
+                    
+    @timer     
     def decide(index = 0):
         #print('decide from',index)
         fi = index
@@ -352,7 +408,7 @@ def main():
                     #print('calling random from decide')
                     random_click()
                 
-       
+    @timer   
     def random_click():
         
         global last_action_israndom
@@ -361,7 +417,7 @@ def main():
         if l:
             index = random.choice(l)
             elements[index].click()  #RANDOM CLICK
-            if (g:=get_cell(index)) == 4:
+            if (g:=get_cell(index)) == 1:
                 vecinos = set()
                 x,y = invconv(index)
                 if x!=0 and y!=0: 
@@ -385,7 +441,7 @@ def main():
                 if x!=sizeX-1 and y!=0:
                     vecinos.add(conv(x+1,y-1))
                 for vi in vecinos:
-                    if 0< board[vi] <9:
+                    if board[vi] <9:
                         #if hadMine: break
                         
                         c = check_cell(index)
@@ -398,32 +454,32 @@ def main():
                             if c:
                                 break
                             
+                            
                 else:
+                    #print('Random after random')
                     random_click()
-                
-        else:
-            get_board()
-            decide(index-sizeX-1)
+            
+            elif g == 2:
+                get_board()
+                decide(index-sizeX-1)   
 
-             
+                
+    @timer         
     def conv(x,y):
         return y*sizeX + x
      
-          
+    @timer      
     def invconv(i):
         return i%sizeX, i//(sizeX)
     
-    
+    @timer
     def perform():
         while not hadMine and any(board==9):
             clk = [a for a in to_right_click]
-            for a in clk:
-                
-                action.context_click(elements[a])
-                to_right_click.remove(a)
+            for a in clk:action.context_click(elements[a]);to_right_click.remove(a)
             action.perform()
     
-    
+    @timer
     def get_size(mode):
         match(mode):
             case 1:
@@ -433,22 +489,14 @@ def main():
             case 3:
                 return (30,16)   
     
-            
+    @timer        
     def printarr(arr):
         ...
         #print('-'*2*sizeX)
         #print('\n'.join([' '.join([str(a) for a in arr[b*sizeX:b*sizeX+sizeX]]).replace('0',' ').replace('9','#') for b in range(sizeY)]))     
         #print('-'*2*sizeX)
     
-    #TODO: fix this    
-    def save_screenshot(mode):
-        files = [a for a in os.listdir('.\\screenshots') if a.startswith(str(mode))]
-        filename = 'screenshots\\'+str(gamemode)+'_'+str(int(files[-1].split('_')[1].rstrip('.png'))+1)+'.png' if files else 'screenshots\\'+str(gamemode)+str(0)+'.png'
-        #print('save_screenshot',filename)
-        sleep(1)
-        driver.save_screenshot(filename)
-     
-        
+    @timer    
     def reset_board():
         try:
             WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="top_area_face"]')))#wait until page is ready to play
@@ -462,7 +510,7 @@ def main():
 
     ################### GAME OPTIONS ###########################
     
-    gamemode = 3
+    gamemode = 2
     reference = f'https://minesweeper.online/start/{gamemode}' 
     driver.get(reference)
     WebDriverWait(driver, 60).until(EC.presence_of_element_located((By.XPATH, '//*[@id="cell_0_0"]')))#wait until page is ready to play
@@ -482,52 +530,34 @@ def main():
         last_action_israndom = 0
         global random_clicks
         random_clicks = 0
-        FLAGS = True
-        #os.system('cls' if sys.platform == 'win32' else 'clear')
+
         
         
         ####################### GAME LOOP #########################        
-        set_board()
-        if FLAGS:
-            perform_thread = Thread(target=perform,daemon=True)
-            perform_thread.start()
-            
+        set_board()     
         random_click()
         
         while not hadMine and any(board==9):
             decide() 
             get_board()
+        
+        if not hadMine:
+            global time_dict, times_dict
+            total_time = sum(time_dict.values())   
+            for name, _time in time_dict.items():
+                print(f"Func: {name:10} \tExec time: ({round(_time*100/total_time,2)}%)\t{(f'{_time:,}').rjust(20):20}\t Exec times: {times_dict.get(name,0)}")
+  
         #################### after WIN / LOSE ###################### 
         if hadMine and not last_action_israndom: input('Continue?')
-        if FLAGS:perform_thread.join()
         
-        time = sum([int(e)*(10**i) for i,e in enumerate([element.get_attribute('class')[-1] for element in driver.find_elements(By.XPATH,'//*[@id="top_area"]/div[2]/div[4]/div[2]/div')][-1::-2])if e in [str(n) for n in range(10)]])
-        
-        
-        capture_great_games = False
-        if capture_great_games and not hadMine:
-            #print('SHOULD CAPTURE')
-            match gamemode:
-                case 1:
-                    if time == 0:
-                        save_screenshot(gamemode)
-                case 2:
-                    if time <= 10:
-                        save_screenshot(gamemode)
-                case 3:
-                    save_screenshot(gamemode)
-                    
-                case _:
-                    #print(repr(gamemode),time)
-                    ...
-        
-            
         #################### SAVE IN LOG FILE ###################
+        time = sum([int(e)*(10**i) for i,e in enumerate([element.get_attribute('class')[-1] for element in driver.find_elements(By.XPATH,'//*[@id="top_area"]/div[2]/div[4]/div[2]/div')][-1::-2])if e in [str(n) for n in range(10)]])
         STATUS = 'COMPLETED' if not np.count_nonzero(board==9) else 'FAILED' if hadMine else 'UNKNOWN'    
         with open('MINESWEEPER_LOG.txt','a') as f:
             f.write(f'GAME v.6 (mode={gamemode}) on {datetime.now().strftime("%m/%d/%Y, %H:%M:%S")} :: time: {time}s :: STATUS: {STATUS}\n')  
             
-        sleep(1)    
+        sleep(1)  
+         
         reset_board()    
         sleep(2)
 
