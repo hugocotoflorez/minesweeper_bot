@@ -1,10 +1,6 @@
 '''
-VERSION 6.0
-
-CAMBIOS:
--optimizacion de recorrido
--solucionado error al hayar mid en v5
--save great games (beta)
+VERSION 6
+edition 2023
 '''
 #################################### modules #########################
 from selenium.webdriver.support import expected_conditions as EC
@@ -70,47 +66,38 @@ def main():
             if i%(sizeX+1) != sizeX:
                 elements[l] = elem
                 l+=1
+   
      
     def get_board():
-        print('getting board')
+        #print('getting board')
         with ThreadPool() as pool:
             pool.starmap(get_cell,[(index,elem) for index,elem in enumerate(elements)])
-            
-            
-    def get_cell(index,elem):
+   
+                      
+    def get_cell(index,*a):
         if board_closed_cells[index]:
-            k = elem.get_attribute('class')[-2::]
-            match k:
-                case '10':
-                    global hadMine
-                    hadMine = True
-                case 'ed':
-                    pass
-                case 'ag':
-                    pass
-                case _:
-                    board[index] = int(k[-1])   
-                    board_closed_cells[index] = 0 
-    
-    def get_elem(index):
-        if board_closed_cells[index]:
-            k = elements[index].get_attribute('class')[-2::]
-            match k:
-                case '10':
-                    global hadMine
-                    hadMine = True
-                    return 1
-                case '11':
-                    hadMine = True
-                    return 1
-                case 'ed':
-                    return 2
-                case 'ag':
-                    return 3
-                case 'e0':
+            sleep(0.05)
+            k = elements[index].get_attribute('class')
+            match k.split()[-1]:
+                case 'hd_pressed':
+                    return get_cell(index)
+                
+                case 'hd_type0':
                     board[index] = 0  
                     board_closed_cells[index] = 0
-                    return 0
+                    return 0 
+                   
+                case 'hd_type11' | 'hd_type10':
+                    global hadMine
+                    hadMine = True
+                    return 1
+                
+                case 'hd_closed':
+                    return 2,k
+                
+                case 'flag':
+                    return 3
+                
                 case _:
                     board[index] = int(k[-1])   
                     board_closed_cells[index] = 0 
@@ -119,7 +106,7 @@ def main():
             return 5
                         
                         
-    def check_cell(index):                    
+    def check_cell(index):
         num = board[index]
         if board_closed_cells[index]:
             index+=1;return#closed cell
@@ -157,7 +144,7 @@ def main():
             for a in vecinos:
                 b,c = invconv(a)
                 elements[a].click()
-                get_elem(a)
+                get_cell(a)
                 
 
             return index - conv(b-1,c-1)
@@ -276,7 +263,7 @@ def main():
                 
                 if n == 0 and len(vecinos):
 
-                    print('PATTERN 1')
+                    #print('PATTERN 1')
 
                     for a in vecinos:
                         x,y = invconv(a)
@@ -287,7 +274,7 @@ def main():
                     
                 elif len(vecinos) == n and n: 
 
-                    print('PATTERN 2')
+                    #print('PATTERN 2')
 
                     for i in vecinos:
                         x,y = invconv(i)
@@ -322,57 +309,19 @@ def main():
                                 board_flag_change[vi]-=1
 
                     return True
+    
         
-    def check_vecinos(i):
-        if get_elem(i) == 4:
-            random_click()
-        else:
-            get_board()
-            decide(i-sizeY-1)
+        
             
-            vecinos = set()
-            x,y = invconv(i)
-            if x!=0 and y!=0: 
-                vecinos.add(conv(x-1,y-1))
-                vecinos.add(conv(x-1,y))
-                vecinos.add(conv(x,y-1))
-            elif x!=0:
-                vecinos.add(conv(x-1,y))
-            elif y!=0:
-                vecinos.add(conv(x,y-1))
-            if x!=sizeX-1 and y!=sizeY-1:
-                vecinos.add(conv(x+1,y+1))
-                vecinos.add(conv(x+1,y))
-                vecinos.add(conv(x,y+1))
-            elif x!=sizeX-1:
-                vecinos.add(conv(x+1,y))
-            elif y!=sizeY-1:
-                vecinos.add(conv(x,y+1))  
-            if x!=0 and y!=sizeY-1:
-                vecinos.add(conv(x-1,y+1))   
-            if x!=sizeX-1 and y!=0:
-                vecinos.add(conv(x+1,y-1))
-            for vi in vecinos:
-                decide_cell(vi)
+            
         
      
-    def decide_cell(index):       
-        if hadMine: return
-            
-        c = check_cell(index)
-        if c:
-            decide(c)
-            return
+    #def decide_cell(index):
         
-        for pibotindex in range(len(board)):
-            c = check_patern(pibotindex)
-            if c:
-                return
-            
-            
+                     
          
     def decide(index = 0):
-        print('decide from',index)
+        #print('decide from',index)
         fi = index
         if hadMine: return
         global last_action_israndom
@@ -380,7 +329,7 @@ def main():
         clicks = 0
 
         while index < sizeX*sizeY:
-            
+            #print(index, sizeX*sizeY)
             c = check_cell(index)
             if c:
                 index = c
@@ -391,46 +340,89 @@ def main():
                 index+=1
 
         if not clicks:
-            print('pattern mode')
-            brk = False
+            #print('pattern mode')
             
             for pibotindex in range(len(board)):
                 c = check_patern(pibotindex)
                 if c:
                     break
             else:
-                brk = True
 
-            if brk and not fi:
-                print('calling random from decide')
-                random_click()
+                if not fi:
+                    #print('calling random from decide')
+                    random_click()
                 
-
-          
+       
     def random_click():
+        
         global last_action_israndom
         last_action_israndom = 1
         l = [i for i,a in enumerate(board) if a == 9]
         if l:
             index = random.choice(l)
             elements[index].click()  #RANDOM CLICK
-            check_vecinos(index)
+            if (g:=get_cell(index)) == 4:
+                vecinos = set()
+                x,y = invconv(index)
+                if x!=0 and y!=0: 
+                    vecinos.add(conv(x-1,y-1))
+                    vecinos.add(conv(x-1,y))
+                    vecinos.add(conv(x,y-1))
+                elif x!=0:
+                    vecinos.add(conv(x-1,y))
+                elif y!=0:
+                    vecinos.add(conv(x,y-1))
+                if x!=sizeX-1 and y!=sizeY-1:
+                    vecinos.add(conv(x+1,y+1))
+                    vecinos.add(conv(x+1,y))
+                    vecinos.add(conv(x,y+1))
+                elif x!=sizeX-1:
+                    vecinos.add(conv(x+1,y))
+                elif y!=sizeY-1:
+                    vecinos.add(conv(x,y+1))  
+                if x!=0 and y!=sizeY-1:
+                    vecinos.add(conv(x-1,y+1))   
+                if x!=sizeX-1 and y!=0:
+                    vecinos.add(conv(x+1,y-1))
+                for vi in vecinos:
+                    if 0< board[vi] <9:
+                        #if hadMine: break
+                        
+                        c = check_cell(index)
+                        if c:
+                            decide(c)
+                            break
+                        
+                        for pibotindex in range(len(board)):
+                            c = check_patern(pibotindex)
+                            if c:
+                                break
+                            
+                else:
+                    random_click()
+                
+        else:
+            get_board()
+            decide(index-sizeX-1)
 
-        
-        
+             
     def conv(x,y):
-        return x*sizeY + y
+        return y*sizeX + x
+     
           
     def invconv(i):
-        return i//(sizeY), i%sizeY
+        return i%sizeX, i//(sizeX)
+    
     
     def perform():
         while not hadMine and any(board==9):
             clk = [a for a in to_right_click]
             for a in clk:
+                
                 action.context_click(elements[a])
                 to_right_click.remove(a)
             action.perform()
+    
     
     def get_size(mode):
         match(mode):
@@ -440,19 +432,22 @@ def main():
                 return (16,16)
             case 3:
                 return (30,16)   
+    
             
     def printarr(arr):
-        print('-'*2*sizeX)
-        print('\n'.join([' '.join([str(a) for a in arr[b*sizeX:b*sizeX+sizeX]]).replace('0',' ').replace('9','#') for b in range(sizeY)]))     
-        print('-'*2*sizeX)
+        ...
+        #print('-'*2*sizeX)
+        #print('\n'.join([' '.join([str(a) for a in arr[b*sizeX:b*sizeX+sizeX]]).replace('0',' ').replace('9','#') for b in range(sizeY)]))     
+        #print('-'*2*sizeX)
     
     #TODO: fix this    
     def save_screenshot(mode):
         files = [a for a in os.listdir('.\\screenshots') if a.startswith(str(mode))]
         filename = 'screenshots\\'+str(gamemode)+'_'+str(int(files[-1].split('_')[1].rstrip('.png'))+1)+'.png' if files else 'screenshots\\'+str(gamemode)+str(0)+'.png'
-        print('save_screenshot',filename)
+        #print('save_screenshot',filename)
         sleep(1)
         driver.save_screenshot(filename)
+     
         
     def reset_board():
         try:
@@ -464,11 +459,10 @@ def main():
         finally:
             WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, '//*[@id="cell_0_0"]')))#wait until page is ready to play
     
-    
 
     ################### GAME OPTIONS ###########################
     
-    gamemode = 2
+    gamemode = 3
     reference = f'https://minesweeper.online/start/{gamemode}' 
     driver.get(reference)
     WebDriverWait(driver, 60).until(EC.presence_of_element_located((By.XPATH, '//*[@id="cell_0_0"]')))#wait until page is ready to play
@@ -494,9 +488,11 @@ def main():
         
         ####################### GAME LOOP #########################        
         set_board()
-        if FLAGS:perform_thread = Thread(target=perform,daemon=True);perform_thread.start()
-        elements[conv(sizeX//2,sizeY//2)].click()
-        check_vecinos(conv(sizeX//2,sizeY//2))
+        if FLAGS:
+            perform_thread = Thread(target=perform,daemon=True)
+            perform_thread.start()
+            
+        random_click()
         
         while not hadMine and any(board==9):
             decide() 
@@ -508,9 +504,9 @@ def main():
         time = sum([int(e)*(10**i) for i,e in enumerate([element.get_attribute('class')[-1] for element in driver.find_elements(By.XPATH,'//*[@id="top_area"]/div[2]/div[4]/div[2]/div')][-1::-2])if e in [str(n) for n in range(10)]])
         
         
-        capture_great_games = True
+        capture_great_games = False
         if capture_great_games and not hadMine:
-            print('SHOULD CAPTURE')
+            #print('SHOULD CAPTURE')
             match gamemode:
                 case 1:
                     if time == 0:
@@ -522,7 +518,8 @@ def main():
                     save_screenshot(gamemode)
                     
                 case _:
-                    print(repr(gamemode),time)
+                    #print(repr(gamemode),time)
+                    ...
         
             
         #################### SAVE IN LOG FILE ###################
@@ -530,9 +527,9 @@ def main():
         with open('MINESWEEPER_LOG.txt','a') as f:
             f.write(f'GAME v.6 (mode={gamemode}) on {datetime.now().strftime("%m/%d/%Y, %H:%M:%S")} :: time: {time}s :: STATUS: {STATUS}\n')  
             
-        sleep(2)    
+        sleep(1)    
         reset_board()    
-        sleep(3)
+        sleep(2)
 
 if __name__ == '__main__': 
     main()
