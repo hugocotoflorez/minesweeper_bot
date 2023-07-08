@@ -1,6 +1,5 @@
 '''
-VERSION 6
-edition 2023
+VERSION 7
 
 optimizar:
 
@@ -163,8 +162,7 @@ def main():
                 board[index] = int(k[-1])
                 board_closed_cells[index] = 0 
                 return 1
-        else:
-            return 
+ 
                         
     @timer                    
     def check_cell(index):
@@ -510,7 +508,7 @@ def main():
 
     ################### GAME OPTIONS ###########################
     
-    gamemode = 2
+    gamemode = 3
     reference = f'https://minesweeper.online/start/{gamemode}' 
     driver.get(reference)
     WebDriverWait(driver, 60).until(EC.presence_of_element_located((By.XPATH, '//*[@id="cell_0_0"]')))#wait until page is ready to play
