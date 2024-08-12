@@ -1,7 +1,9 @@
-# minesweeper_bot
-The same as the tile, nothing more to say.
+# Minesweeper Bot
 
-see howto_play to play, 
-see info to learn a bit more
+## About 
 
-Yes, see your name in the top is great even knowing that isn't your merit
+This bot play in minesweeper.org, previous versions allow to login but due to the easy that getting banned was this option was removed. 
+
+## Possible errors 
+
+minesweeper.org sometimes change the structure of the page so little changes in the script are needed to get it running.
