@@ -46,7 +46,10 @@ def timer(_func=None)->None:
 ############################ MAIN METHOD ###########################
 def main():
     ######################## WEBDRIVER DATA ########################
-    path = '.\\chromedriver.exe' if 'chromedriver.exe' in os.listdir() else ChromeDriverManager().install()
+    print("Getting chromedriver")
+    # '.\\chromedriver.exe' if 'chromedriver.exe' in os.listdir() else
+    path = ChromeDriverManager().install()
+    print("Get")
     options = webdriver.ChromeOptions()
 
     ######################### SET DRIVER #############################
@@ -56,10 +59,21 @@ def main():
     @timer
     def set_board():
         l = 0
-        for i,elem in enumerate(driver.find_elements(By.XPATH,'/html/body/div[3]/div[2]/div/div[1]/div[2]/div/div[21]/table/tbody/tr/td[1]/div/div[1]/div[4]/div[2]/div')):
+        for i,elem in enumerate(driver.find_elements(By.XPATH,'/html/body/div[3]/div[2]/div/div[1]/div[2]/div/div[4]/div[6]/table/tbody/tr/td[1]/div/div[1]/div[4]/div[2]/div')):
             if i%(sizeX+1) != sizeX:
+                if(elem == None):
+                    print("None element!")
                 elements[l] = elem
                 l+=1
+
+    @timer
+    def check_integrity():
+        i = 0
+        for elem in elements:
+            if elem == None:
+                i+=1
+                print(f"elements = None!! [counter={i}]")
+
 
     @timer
     def get_board():
@@ -264,7 +278,8 @@ def main():
                     for a in vecinos:
                         x,y = invconv(a)
 
-                        if board_closed_cells[a]:elements[a].click()
+                        if board_closed_cells[a]:
+                            elements[a].click()
 
                     return True
 
@@ -345,7 +360,7 @@ def main():
         global last_action_israndom
         last_action_israndom = 1
         index = sizeX//2*(sizeY+1)
-        while board[index] !=9:
+        while board[index] != 9:
             index+=1
             index%=sizeX*sizeY
         elements[index].click()  #RANDOM CLICK
@@ -429,10 +444,12 @@ def main():
 
     ################### GAME OPTIONS ###########################
 
-    gamemode = 3
+    gamemode = 2
     reference = f'https://minesweeper.online/start/{gamemode}'
     driver.get(reference)
     WebDriverWait(driver, 60).until(EC.presence_of_element_located((By.XPATH, '//*[@id="cell_0_0"]')))#wait until page is ready to play
+
+    input("Acepta las condiciones y despues dale enter")
 
     while True:#main loop
         sizeX,sizeY = get_size(gamemode)
@@ -454,6 +471,8 @@ def main():
 
         ####################### GAME LOOP #########################
         set_board()
+        print("Board set")
+        check_integrity()
         random_click()
 
         while not hadMine and any(board==9):
